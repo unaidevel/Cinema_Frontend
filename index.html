@@ -546,7 +546,10 @@
                     // Ensure session.id is a string
                     option.value = String(session.id);
                     const dt = new Date(session.session_time);
-                    option.textContent = `${dt.toLocaleString()} | Room: ${session.room} | €${session.price}`;
+                    // Format: YYYY-MM-DD HH:MM
+                    const date = dt.toLocaleDateString();
+                    const time = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    option.textContent = `${date} ${time}`;
                     sessionSelect.appendChild(option);
                 });
             } catch (e) {
