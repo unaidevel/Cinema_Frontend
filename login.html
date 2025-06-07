@@ -265,7 +265,7 @@
                 loginBtn.innerHTML = '<div class="loading"></div>';
                 responseDiv.innerHTML = 'Logging in...';
 
-                const response = await fetch(`${apiBaseUrl}/auth/login`, {
+                const response = await fetch(`${apiBaseUrl}/token`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'

@@ -239,6 +239,8 @@
                 <span id="registerText">Register</span>
             </button>
 
+            <div id="registerSuccess" style="display:none; color:#4ecdc4; text-align:center; font-size:0.95em; margin-top:10px;">Registration successful! Redirecting to login...</div>
+
             <div class="progress-container">
                 <div class="progress-bar" id="progressBar"></div>
             </div>
@@ -324,7 +326,7 @@
                 });
 
                 if (response.ok) {
-                    responseDiv.innerHTML = '✅ Registration successful! Redirecting to login...';
+                    document.getElementById('registerSuccess').style.display = 'block';
                     setTimeout(() => {
                         window.location.href = 'login.html';
                     }, 2000);
