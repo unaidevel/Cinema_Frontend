@@ -358,8 +358,14 @@
             <div class="subtitle">Your Premium Movie Booking Experience</div>
             <div class="api-status" id="apiStatus">🔗 API Ready</div>
             <div style="margin-top: 24px; display: flex; justify-content: center; gap: 16px;">
-                <button class="btn" onclick="window.location.href='login.html'">Login</button>
-                <button class="btn" onclick="window.location.href='register.html'">Register</button>
+                <div id="authButtons">
+                    <button class="btn" onclick="window.location.href='login.html'">Login</button>
+                    <button class="btn" onclick="window.location.href='register.html'">Register</button>
+                </div>
+                <div id="userInfo" style="display: none;">
+                    <button class="btn" onclick="window.location.href='#profile.html'" style="margin-right: 10px;">Profile</button>
+                    <button class="btn" onclick="logout()">Logout</button>
+                </div>
             </div>
         </header>
 
@@ -460,18 +466,61 @@
     </div>
 
     <script>
-        let selectedSeats = [];
+        let selectedSeats = []; // Array para almacenar UUIDs de asientos seleccionados
+        let seatNameToUuidMap = {}; // Mapa de nombres de asientos a UUIDs
         let movies = [];
         let sessions = [];
-        let seatsData = {};
         let apiBaseUrl = 'https://cinema-api.unaimunoz.dev';
 
         document.addEventListener('DOMContentLoaded', function() {
             updateApiUrl();
+            checkAuth();
             loadMovies();
             document.getElementById('movieSelect').addEventListener('change', onMovieChange);
             document.getElementById('sessionSelect').addEventListener('change', onSessionChange);
         });
+
+        function checkAuth() {
+            const token = localStorage.getItem('token');
+            const username = localStorage.getItem('username');
+            const authButtons = document.getElementById('authButtons');
+            const userInfo = document.getElementById('userInfo');
+
+            if (token && username) {
+                authButtons.style.display = 'none';
+                userInfo.style.display = 'flex';
+                userInfo.innerHTML = `
+                    <button class="btn" onclick="window.location.href='profile.html'" style="margin-right: 10px;">Profile</button>
+                    <button class="btn" onclick="logout()">Logout</button>
+                `;
+            } else {
+                authButtons.style.display = 'flex';
+                userInfo.style.display = 'none';
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('username');
+            window.location.reload();
+        }
+
+        function getAuthHeaders() {
+            const token = localStorage.getItem('token');
+            return {
+                'Content-Type': 'application/json',
+                'Authorization': token ? `Bearer ${token}` : ''
+            };
+        }
+
+        function isAuthenticated() {
+            return !!localStorage.getItem('token');
+        }
+
+        function showAuthRequired() {
+            const responseDiv = document.getElementById('bookingResponse');
+            responseDiv.innerHTML = '❌ Please login to complete your booking. <a href="login.html" style="color: #4ecdc4;">Login here</a>';
+        }
 
         function updateApiUrl() {
             apiBaseUrl = document.getElementById('apiUrl').value;
@@ -488,7 +537,7 @@
                 responseDiv.innerHTML = 'Loading movies...';
                 const response = await fetch(`${apiBaseUrl}/movie`, {
                     method: 'GET',
-                    headers: { 'Content-Type': 'application/json' }
+                    headers: getAuthHeaders()
                 });
                 if (response.ok) {
                     movies = await response.json();
@@ -500,7 +549,7 @@
                         movieCard.innerHTML = `
                             <div class="movie-poster">🎬</div>
                             <h3>${movie.title}</h3>
-                            <p>${movie.genre}</p>
+                            <p>${movie.genre.charAt(0).toUpperCase() + movie.genre.slice(1)}</p>
                             <p>${movie.duration} min</p>
                         `;
                         moviesGrid.appendChild(movieCard);
@@ -530,27 +579,21 @@
             if (!movieId) {
                 sessionSelect.innerHTML = '<option value="">Choose a session...</option>';
                 return;
-            }
+            } 
             updateApiUrl();
-            // Fetch sessions for this movie
             try {
                 const response = await fetch(`${apiBaseUrl}/sessions`, {
                     method: 'GET',
-                    headers: { 'Content-Type': 'application/json' }
+                    headers: getAuthHeaders()
                 });
                 if (!response.ok) throw new Error('Failed to fetch sessions');
                 const allSessions = await response.json();
-                console.log('All sessions:', allSessions);
-                // Filter sessions for this movie
                 sessions = allSessions.filter(s => s.movie_id === movieId && !s.disabled);
-                console.log('Filtered sessions for movie:', sessions);
                 sessionSelect.innerHTML = '<option value="">Choose a session...</option>';
                 sessions.forEach(session => {
                     const option = document.createElement('option');
-                    // Ensure session.id is a string
                     option.value = String(session.id);
                     const dt = new Date(session.session_time);
-                    // Format: YYYY-MM-DD HH:MM
                     const date = dt.toLocaleDateString();
                     const time = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     option.textContent = `${date} ${time}`;
@@ -564,16 +607,13 @@
 
         async function onSessionChange() {
             const sessionId = document.getElementById('sessionSelect').value;
-            console.log('Selected session ID:', sessionId);
             selectedSeats = [];
             updateBookingSummary();
             if (!sessionId) {
                 document.getElementById('seatMap').innerHTML = '';
                 return;
             }
-            // Ensure sessionId is properly formatted
             const formattedSessionId = String(sessionId).trim();
-            console.log('Formatted session ID:', formattedSessionId);
             await loadSeatsForSession(formattedSessionId);
         }
 
@@ -582,28 +622,18 @@
             const seatMap = document.getElementById('seatMap');
             seatMap.innerHTML = '<div class="loading"></div>';
             try {
-                console.log(`Fetching seats from: ${apiBaseUrl}/session/${sessionId}/seats`);
                 const response = await fetch(`${apiBaseUrl}/session/${sessionId}/seats`, {
                     method: 'GET',
-                    headers: { 'Content-Type': 'application/json' }
+                    headers: getAuthHeaders()
                 });
-                
-                if (!response.ok) {
-                    console.error('Response not OK:', response.status, response.statusText);
-                    throw new Error(`Failed to fetch seats: ${response.status} ${response.statusText}`);
-                }
-                
+                if (!response.ok) throw new Error(`Failed to fetch seats: ${response.status} ${response.statusText}`);
                 const seatsPerRow = await response.json();
-                console.log('Received seats data:', seatsPerRow);
-                
-                if (!seatsPerRow || Object.keys(seatsPerRow).length === 0) {
-                    throw new Error('No seats data received');
-                }
+                console.log('Raw API response:', JSON.stringify(seatsPerRow, null, 2)); // Debug log
                 
                 seatMap.innerHTML = '';
-                seatsData = {}; // Map seat_number -> {reserved, ...}
+                seatNameToUuidMap = {}; // Reiniciar el mapa
 
-                // Create screen
+                // Crear pantalla
                 const screen = document.createElement('div');
                 screen.style.textAlign = 'center';
                 screen.style.marginBottom = '20px';
@@ -612,9 +642,9 @@
                 screen.style.borderRadius = '5px';
                 screen.textContent = 'SCREEN';
                 seatMap.appendChild(screen);
-                
-                // Create rows A to F
+
                 const rows = ['A', 'B', 'C', 'D', 'E', 'F'];
+                const seatsPerRowCount = 15;
                 rows.forEach(row => {
                     const rowContainer = document.createElement('div');
                     rowContainer.className = 'cinema-row';
@@ -622,33 +652,44 @@
                     rowContainer.style.alignItems = 'center';
                     rowContainer.style.justifyContent = 'center';
                     rowContainer.style.marginBottom = '8px';
-                    
-                    // Add row label
+
                     const rowLabel = document.createElement('span');
                     rowLabel.className = 'row-label';
                     rowLabel.textContent = row;
                     rowContainer.appendChild(rowLabel);
 
-                    // Add left bar
                     const leftBar = document.createElement('span');
                     leftBar.className = 'row-bar';
                     leftBar.textContent = '|';
                     rowContainer.appendChild(leftBar);
 
-                    // Create 15 seats for each row
-                    for (let i = 1; i <= 15; i++) {
-                        const seatId = `${row}${i}`;
-                        const seat = seatsPerRow[row]?.find(s => s.number === i) || { number: i, reserved: false };
-                        seatsData[seatId] = seat;
-                        
+                    // Renderizar asientos para esta fila
+                    for (let i = 0; i < seatsPerRowCount; i++) {
+                        const seatObj = seatsPerRow[row]?.[i];
+                        const seatNumber = i + 1;
+                        const seatName = `${row}${seatNumber}`;
+                        let isReserved = false;
+                        let uuid = null;
+                        if (seatObj) {
+                            uuid = seatObj.id;
+                            isReserved = seatObj.is_reserved;
+                            // Almacenar el mapeo de nombre a UUID
+                            seatNameToUuidMap[seatName] = uuid;
+                            console.log(`Seat ${seatName} data:`, {
+                                seatObj,
+                                uuid,
+                                allProps: Object.keys(seatObj)
+                            }); // Debug log
+                        }
+
                         const seatDiv = document.createElement('div');
                         seatDiv.className = 'seat';
-                        seatDiv.textContent = i.toString().padStart(2, '0');
-                        seatDiv.dataset.seatId = seatId;
-                        seatDiv.dataset.seatUuid = seat.id;
+                        seatDiv.textContent = seatNumber.toString().padStart(2, '0');
+                        seatDiv.dataset.seatName = seatName;
+                        seatDiv.dataset.uuid = uuid;
                         seatDiv.style.margin = '0 2px';
-                        
-                        if (seat.reserved) {
+
+                        if (isReserved) {
                             seatDiv.classList.add('occupied');
                         } else {
                             seatDiv.addEventListener('click', toggleSeat);
@@ -656,7 +697,6 @@
                         rowContainer.appendChild(seatDiv);
                     }
 
-                    // Add right bar
                     const rightBar = document.createElement('span');
                     rightBar.className = 'row-bar';
                     rightBar.textContent = '|';
@@ -665,23 +705,32 @@
                     seatMap.appendChild(rowContainer);
                 });
             } catch (e) {
-                console.error('Detailed error loading seats:', e);
+                console.error('Error loading seats:', e);
                 seatMap.innerHTML = `Failed to load seats: ${e.message}`;
             }
         }
 
         function toggleSeat(event) {
-            const seat = event.target;
-            const seatId = seat.dataset.seatId;
-            const seatUuid = seat.dataset.seatUuid;
+            const seatDiv = event.target;
+            const seatName = seatDiv.dataset.seatName;
+            const seatUuid = seatDiv.dataset.uuid;
             
-            if (seat.classList.contains('selected')) {
-                seat.classList.remove('selected');
-                selectedSeats = selectedSeats.filter(s => s.uuid !== seatUuid);
+            if (!seatName || !seatUuid) return;
+            
+            console.log('Toggling seat:', { 
+                seatName, 
+                seatUuid,
+                seatData: seatNameToUuidMap[seatName]
+            }); // Debug log
+            
+            if (seatDiv.classList.contains('selected')) {
+                seatDiv.classList.remove('selected');
+                selectedSeats = selectedSeats.filter(uuid => uuid !== seatUuid);
             } else {
-                seat.classList.add('selected');
-                selectedSeats.push({ label: seatId, uuid: seatUuid });
+                seatDiv.classList.add('selected');
+                selectedSeats.push(seatUuid);
             }
+            console.log('Current selected seats:', selectedSeats); // Debug log
             updateBookingSummary();
         }
 
@@ -690,6 +739,15 @@
             const totalPriceElement = document.getElementById('totalPrice');
             const pricePerSeatElement = document.getElementById('pricePerSeat');
             const sessionId = document.getElementById('sessionSelect').value;
+            
+            // Obtener nombres de asientos a partir de los UUIDs seleccionados
+            const selectedSeatNames = [];
+            for (const seatName in seatNameToUuidMap) {
+                if (selectedSeats.includes(seatNameToUuidMap[seatName])) {
+                    selectedSeatNames.push(seatName);
+                }
+            }
+            
             let price = 0;
             if (sessionId) {
                 const session = sessions.find(s => s.id === sessionId);
@@ -698,16 +756,22 @@
             } else {
                 pricePerSeatElement.textContent = '€0.00';
             }
-            if (selectedSeats.length === 0) {
+            
+            if (selectedSeatNames.length === 0) {
                 selectedSeatsElement.textContent = 'None';
                 totalPriceElement.textContent = '€0.00';
             } else {
-                selectedSeatsElement.textContent = selectedSeats.map(s => s.label).join(', ');
-                totalPriceElement.textContent = `€${(selectedSeats.length * price).toFixed(2)}`;
+                selectedSeatsElement.textContent = selectedSeatNames.join(', ');
+                totalPriceElement.textContent = `€${(selectedSeatNames.length * price).toFixed(2)}`;
             }
         }
 
         async function bookSeats() {
+            if (!isAuthenticated()) {
+                showAuthRequired();
+                return;
+            }
+
             const sessionId = document.getElementById('sessionSelect').value;
             if (!sessionId) {
                 alert('Please select a session!');
@@ -717,31 +781,97 @@
                 alert('Please select at least one seat!');
                 return;
             }
+
             updateApiUrl();
             const responseDiv = document.getElementById('bookingResponse');
             const bookBtn = document.getElementById('bookingText');
             try {
                 bookBtn.innerHTML = '<div class="loading"></div>';
                 responseDiv.innerHTML = 'Processing booking...';
-                
-                const bookingData = { seat_ids: selectedSeats.map(s => s.uuid) };
+
+                // Ensure we're sending the correct data structure
+                const bookingData = {
+                    session_id: sessionId,
+                    seat_ids: selectedSeats.filter(id => id) // Filter out any null/undefined values
+                };
+
+                console.log('Sending booking data:', JSON.stringify(bookingData, null, 2)); // Debug log
+
                 const response = await fetch(`${apiBaseUrl}/session/${sessionId}/booking`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        ...getAuthHeaders(),
+                        'Content-Type': 'application/json'
+                    },
                     body: JSON.stringify(bookingData)
                 });
-                
+
+                const data = await response.json();
+                console.log('Booking response:', JSON.stringify(data, null, 2)); // Debug log
+
                 if (response.ok) {
-                    const result = await response.json();
-                    responseDiv.innerHTML = `🎉 Booking successful!\n${JSON.stringify(result, null, 2)}`;
+                    // Get the selected movie and session info
+                    const movieSelect = document.getElementById('movieSelect');
+                    const sessionSelect = document.getElementById('sessionSelect');
+                    const selectedMovie = movies.find(m => m.id === data.movie_id);
+                    const selectedSession = sessions.find(s => s.id === data.session_id);
+                    
+                    // Format the date
+                    const bookingDate = new Date(data.booking_date).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    });
+
+                    // Get the selected seat names
+                    const selectedSeatNames = Object.entries(seatNameToUuidMap)
+                        .filter(([_, uuid]) => selectedSeats.includes(uuid))
+                        .map(([name]) => name);
+
+                    // Get the time from the selected session
+                    console.log('Selected session:', selectedSession); // Debug log
+                    const dt = new Date(selectedSession?.session_time);
+                    const sessionTime = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || 'N/A';
+
+                    // Create a user-friendly success message
+                    const successMessage = `
+                        <div style="text-align: center; padding: 10px; max-height: none; overflow: visible;">
+                            <h2 style="color: #4CAF50; margin: 0 0 10px 0; font-size: 1.2em;">🎉 Booking Successful!</h2>
+                            <div style="background: rgba(255, 255, 255, 0.1); padding: 10px; border-radius: 8px; margin: 5px 0;">
+                                <p style="margin: 3px 0; font-size: 0.9em;"><strong>Movie:</strong> ${selectedMovie?.title || 'N/A'}</p>
+                                <p style="margin: 3px 0; font-size: 0.9em;"><strong>Date:</strong> ${bookingDate}</p>
+                                <p style="margin: 3px 0; font-size: 0.9em;"><strong>Time:</strong> ${sessionTime}</p>
+                                <p style="margin: 3px 0; font-size: 0.9em;"><strong>Seats:</strong> ${selectedSeatNames.join(', ')}</p>
+                                <p style="margin: 3px 0; font-size: 0.9em;"><strong>Booking ID:</strong> ${data.id}</p>
+                            </div>
+                            <p style="margin: 5px 0; font-size: 0.8em; color: #888;">Thank you for your booking. Enjoy the movie!</p>
+                        </div>
+                    `;
+                    
+                    responseDiv.innerHTML = successMessage;
+                    responseDiv.style.display = 'block';
+                    responseDiv.style.maxHeight = 'none';
+                    responseDiv.style.overflow = 'visible';
                     selectedSeats = [];
                     updateBookingSummary();
                     await loadSeatsForSession(sessionId);
                 } else {
-                    throw new Error(`HTTP ${response.status}`);
+                    let errorMessage = 'Booking failed';
+                    if (data.detail) {
+                        if (typeof data.detail === 'string') {
+                            errorMessage = data.detail;
+                        } else if (Array.isArray(data.detail)) {
+                            errorMessage = data.detail.map(err => err.msg || err.message).join(', ');
+                        } else if (typeof data.detail === 'object') {
+                            errorMessage = Object.values(data.detail).join(', ');
+                        }
+                    }
+                    throw new Error(errorMessage);
                 }
             } catch (error) {
-                responseDiv.innerHTML = `❌ Booking failed: ${error.message}`;
+                console.error('Booking error:', error);
+                responseDiv.style.display = 'block';
+                responseDiv.innerHTML = `❌ ${error.message}`;
             } finally {
                 bookBtn.textContent = 'Complete Booking';
             }
@@ -756,9 +886,7 @@
                 responseDiv.innerHTML = '<div class="loading"></div> Testing connection...';
                 const response = await fetch(`${apiBaseUrl}/movie`, {
                     method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
+                    headers: getAuthHeaders()
                 });
                 
                 if (response.ok) {
@@ -775,6 +903,55 @@
                 statusDiv.innerHTML = '🔴 API Disconnected';
                 statusDiv.style.background = 'rgba(244, 67, 54, 0.2)';
                 statusDiv.style.borderColor = '#f44336';
+            }
+        }
+
+        function updateAuthUI() {
+            const authDiv = document.getElementById('authDiv');
+            const user = getCurrentUser();
+            if (user) {
+                authDiv.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 10px; background: rgba(255, 255, 255, 0.1); padding: 8px 15px; border-radius: 20px;">
+                        <span style="color: #4CAF50;">👋</span>
+                        <span style="color: #fff; font-size: 0.9em;">Welcome, <span style="color: #4CAF50; font-weight: 500;">${user.username}</span></span>
+                        <button onclick="logout()" style="
+                            background: rgba(255, 255, 255, 0.1);
+                            border: none;
+                            color: #fff;
+                            padding: 5px 10px;
+                            border-radius: 15px;
+                            cursor: pointer;
+                            font-size: 0.8em;
+                            transition: all 0.3s ease;
+                        " onmouseover="this.style.background='rgba(255, 255, 255, 0.2)'"
+                          onmouseout="this.style.background='rgba(255, 255, 255, 0.1)'">Logout</button>
+                    </div>
+                `;
+            } else {
+                authDiv.innerHTML = `
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="window.location.href='login.html'" style="
+                            background: rgba(255, 255, 255, 0.1);
+                            border: none;
+                            color: #fff;
+                            padding: 8px 15px;
+                            border-radius: 20px;
+                            cursor: pointer;
+                            transition: all 0.3s ease;
+                        " onmouseover="this.style.background='rgba(255, 255, 255, 0.2)'"
+                          onmouseout="this.style.background='rgba(255, 255, 255, 0.1)'">Login</button>
+                        <button onclick="window.location.href='register.html'" style="
+                            background: #4CAF50;
+                            border: none;
+                            color: #fff;
+                            padding: 8px 15px;
+                            border-radius: 20px;
+                            cursor: pointer;
+                            transition: all 0.3s ease;
+                        " onmouseover="this.style.background='#45a049'"
+                          onmouseout="this.style.background='#4CAF50'">Register</button>
+                    </div>
+                `;
             }
         }
     </script>

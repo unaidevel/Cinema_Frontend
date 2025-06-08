@@ -239,6 +239,7 @@
                 <span id="registerText">Register</span>
             </button>
 
+            <div id="registerResponse" class="response-area" style="display: none;"></div>
             <div id="registerSuccess" style="display:none; color:#4ecdc4; text-align:center; font-size:0.95em; margin-top:10px;">Registration successful! Redirecting to login...</div>
 
             <div class="progress-container">
@@ -254,6 +255,30 @@
     <script>
         let apiBaseUrl = 'https://cinema-api.unaimunoz.dev';
         const totalFields = 6; // Total number of required fields
+
+        function validateEmail(email) {
+            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return re.test(email);
+        }
+
+        function validatePassword(password) {
+            // At least 8 characters, 1 uppercase, 1 lowercase, 1 number
+            const hasMinLength = password.length >= 8;
+            const hasUpperCase = /[A-Z]/.test(password);
+            const hasLowerCase = /[a-z]/.test(password);
+            const hasNumber = /[0-9]/.test(password);
+            
+            // Debug password validation
+            console.log('Password validation:', {
+                password,
+                hasMinLength,
+                hasUpperCase,
+                hasLowerCase,
+                hasNumber
+            });
+            
+            return hasMinLength && hasUpperCase && hasLowerCase && hasNumber;
+        }
 
         function updateProgress() {
             const fields = [
@@ -296,45 +321,77 @@
             const responseDiv = document.getElementById('registerResponse');
             const registerBtn = document.getElementById('registerText');
 
+            // Clear previous messages
+            responseDiv.style.display = 'none';
+            responseDiv.innerHTML = '';
+
             // Basic validation
             if (!fullName || !username || !email || !birthDate || !password || !confirmPassword) {
+                responseDiv.style.display = 'block';
                 responseDiv.innerHTML = '❌ Please fill in all fields';
                 return;
             }
 
+            if (!validateEmail(email)) {
+                responseDiv.style.display = 'block';
+                responseDiv.innerHTML = '❌ Please enter a valid email address';
+                return;
+            }
+
+            const passwordValidation = validatePassword(password);
+            if (!passwordValidation) {
+                responseDiv.style.display = 'block';
+                responseDiv.innerHTML = '❌ Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one number';
+                return;
+            }
+
             if (password !== confirmPassword) {
+                responseDiv.style.display = 'block';
                 responseDiv.innerHTML = '❌ Passwords do not match';
                 return;
             }
 
             try {
                 registerBtn.innerHTML = '<div class="loading"></div>';
+                responseDiv.style.display = 'block';
                 responseDiv.innerHTML = 'Creating account...';
+
+                const userData = {
+                    full_name: fullName,
+                    username,
+                    email,
+                    birth_date: birthDate,
+                    password
+                };
+
+                console.log('Sending registration request with data:', {
+                    ...userData,
+                    password: '********' // Hide password in logs
+                });
 
                 const response = await fetch(`${apiBaseUrl}/user`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        full_name: fullName,
-                        username,
-                        email,
-                        birth_date: birthDate,
-                        password
-                    })
+                    body: JSON.stringify(userData)
                 });
+
+                const data = await response.json();
+                console.log('Registration response:', data);
 
                 if (response.ok) {
                     document.getElementById('registerSuccess').style.display = 'block';
+                    responseDiv.style.display = 'none';
                     setTimeout(() => {
                         window.location.href = 'login.html';
                     }, 2000);
                 } else {
-                    const error = await response.json();
-                    throw new Error(error.detail || 'Registration failed');
+                    throw new Error(data.detail || 'Registration failed');
                 }
             } catch (error) {
+                console.error('Registration error:', error);
+                responseDiv.style.display = 'block';
                 responseDiv.innerHTML = `❌ ${error.message}`;
             } finally {
                 registerBtn.textContent = 'Register';
