@@ -188,6 +188,9 @@
             transition: all 0.3s ease;
             border: 1px solid rgba(255, 255, 255, 0.1);
             cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            display: block;
         }
 
         .movie-card:hover {
@@ -359,11 +362,11 @@
             <div class="api-status" id="apiStatus">🔗 API Ready</div>
             <div style="margin-top: 24px; display: flex; justify-content: center; gap: 16px;">
                 <div id="authButtons">
-                    <button class="btn" onclick="window.location.href='login.html'">Login</button>
+                    <button class="btn" onclick="window.location.href='login.html'" style="margin-right: 10px;">Login</button>
                     <button class="btn" onclick="window.location.href='register.html'">Register</button>
                 </div>
                 <div id="userInfo" style="display: none;">
-                    <button class="btn" onclick="window.location.href='#profile.html'" style="margin-right: 10px;">Profile</button>
+                    <button class="btn" onclick="window.location.href='profile.html'" style="margin-right: 10px;">Profile</button>
                     <button class="btn" onclick="logout()">Logout</button>
                 </div>
             </div>
@@ -544,7 +547,8 @@
                     moviesGrid.innerHTML = '';
                     movieSelect.innerHTML = '<option value="">Choose a movie...</option>';
                     movies.forEach((movie, index) => {
-                        const movieCard = document.createElement('div');
+                        const movieCard = document.createElement('a');
+                        movieCard.href = `movie-details.html?slug=${movie.slug}`;
                         movieCard.className = 'movie-card';
                         movieCard.innerHTML = `
                             <div class="movie-poster">🎬</div>
