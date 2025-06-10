@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CineMax - Book Your Movie Experience</title>
+    <title>Cine Unai Muñoz</title>
     <link rel="icon" href="/static/favicon.png" />
     <style>
         * {
@@ -358,17 +358,17 @@
 <body>
     <div class="container">
         <header>
-            <div class="logo">🎬 Cine Paquito</div>
-            <div class="subtitle">Your Premium Movie Booking Experience</div>
+            <div class="logo">🎬 Cine Unai Muñoz</div>
+            <div class="subtitle">Su servicio de reserva de películas</div>
             <div class="api-status" id="apiStatus">🔗 API Ready</div>
             <div style="margin-top: 24px; display: flex; justify-content: center; gap: 16px;">
                 <div id="authButtons">
-                    <button class="btn" onclick="window.location.href='login.html'" style="margin-right: 10px;">Login</button>
-                    <button class="btn" onclick="window.location.href='register.html'">Register</button>
+                    <button class="btn" onclick="window.location.href='login.html'" style="margin-right: 10px;">Inicia sesión</button>
+                    <button class="btn" onclick="window.location.href='register.html'">Registrarse</button>
                 </div>
                 <div id="userInfo" style="display: none;">
-                    <button class="btn" onclick="window.location.href='profile.html'" style="margin-right: 10px;">Profile</button>
-                    <button class="btn" onclick="logout()">Logout</button>
+                    <button class="btn" onclick="window.location.href='profile.html'" style="margin-right: 10px;">Perfil</button>
+                    <button class="btn" onclick="logout()">Cerrar sesión</button>
                 </div>
             </div>
         </header>
@@ -379,13 +379,13 @@
                     <svg class="icon" viewBox="0 0 24 24">
                         <path d="M18,4L20,8H17L15,4H13L15,8H12L10,4H8L10,8H7L5,4H4A2,2 0 0,0 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V6A2,2 0 0,0 20,4H18Z"/>
                     </svg>
-                    Available movies
+                    Películas disponibles
                 </h2>
                 <div class="movies-grid" id="moviesGrid">
                     <!-- Movies will be loaded here -->
                 </div>
                 <button class="btn" onclick="loadMovies()">
-                    <span id="loadMoviesText">Load Movies</span>
+                    <span id="loadMoviesText">Cargar películas</span>
                 </button>
                 <div class="response-area" id="moviesResponse"></div>
             </div>
@@ -395,35 +395,35 @@
                     <svg class="icon" viewBox="0 0 24 24">
                         <path d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z"/>
                     </svg>
-                    Book Your Seats
+                    Reserva tus asientos
                 </h2>
                 
                 <div class="form-group">
-                    <label for="movieSelect">Select Movie</label>
+                    <label for="movieSelect">Selecciona película</label>
                     <select id="movieSelect">
-                        <option value="">Choose a movie...</option>
+                        <option value="">Selecciona una película...</option>
                     </select>
                 </div>
 
                 <div class="form-group">
-                    <label for="sessionSelect">Select Session</label>
+                    <label for="sessionSelect">Selecciona sesión</label>
                     <select id="sessionSelect">
-                        <option value="">Choose a session...</option>
+                        <option value="">Selecciona una sesión...</option>
                     </select>
                 </div>
 
                 <div class="legend">
                     <div class="legend-item">
                         <div class="legend-seat" style="background: rgba(255, 255, 255, 0.1); border: 2px solid rgba(255, 255, 255, 0.3);"></div>
-                        <span>Available</span>
+                        <span>Disponible</span>
                     </div>
                     <div class="legend-item">
                         <div class="legend-seat" style="background: #4ecdc4;"></div>
-                        <span>Selected</span>
+                        <span>Seleccionados</span>
                     </div>
                     <div class="legend-item">
                         <div class="legend-seat" style="background: #ff6b6b;"></div>
-                        <span>Occupied</span>
+                        <span>Ocupados</span>
                     </div>
                 </div>
 
@@ -433,11 +433,11 @@
 
                 <div class="booking-summary">
                     <div class="summary-item">
-                        <span>Selected Seats:</span>
+                        <span>Asientos seleccionados:</span>
                         <span id="selectedSeats">None</span>
                     </div>
                     <div class="summary-item">
-                        <span>Price per Seat:</span>
+                        <span>Precio por asiento:</span>
                         <span id="pricePerSeat">€0.00</span>
                     </div>
                     <div class="summary-item total">
@@ -447,7 +447,7 @@
                 </div>
 
                 <button class="btn" onclick="bookSeats()" style="width: 100%; margin-top: 20px;">
-                    <span id="bookingText">Complete Booking</span>
+                    <span id="bookingText">Completar reserva</span>
                 </button>
                 <div class="response-area" id="bookingResponse"></div>
             </div>
@@ -458,13 +458,13 @@
                 <svg class="icon" viewBox="0 0 24 24">
                     <path d="M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19Z"/>
                 </svg>
-                API Configuration
+                Configuración de la API
             </h2>
             <div class="form-group">
-                <label for="apiUrl">FastAPI Base URL</label>
+                <label for="apiUrl">URL Base de FastAPI</label>
                 <input type="text" id="apiUrl" value="https://cinema-api.unaimunoz.dev" placeholder="Enter your API URL">
             </div>
-            <button class="btn" onclick="testConnection()">Test API Connection</button>
+            <button class="btn" onclick="testConnection()">Comprobar conexión API</button>
             <div class="response-area" id="connectionResponse"></div>
         </div>
     </div>
