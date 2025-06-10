@@ -360,7 +360,7 @@
         <header>
             <div class="logo">🎬 Cine Unai Muñoz</div>
             <div class="subtitle">Su servicio de reserva de películas</div>
-            <div class="api-status" id="apiStatus">🔗 API Ready</div>
+            <div class="api-status" id="apiStatus">🔗 API Lista</div>
             <div style="margin-top: 24px; display: flex; justify-content: center; gap: 16px;">
                 <div id="authButtons">
                     <button class="btn" onclick="window.location.href='login.html'" style="margin-right: 10px;">Inicia sesión</button>
@@ -570,7 +570,7 @@
             } catch (error) {
                 responseDiv.innerHTML = `❌ Failed to load movies: ${error.message}`;
             } finally {
-                loadBtn.textContent = 'Load Movies';
+                loadBtn.textContent = 'Cargar películas';
             }
         }
 
